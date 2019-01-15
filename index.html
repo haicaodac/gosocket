@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head></head>
+
+<body>
+    <!-- websockets.html -->
+    <input id="input" type="text" value="test" />
+    <input id="idSocket" type="text" placeholder="ID socket" />
+    <button onclick="send()">Send</button>
+    <pre id="output"></pre>
+    <script>
+        var _url = "ws://localhost:8080/echo"
+        var socket = null
+        socket = new WebSocket(_url);
+
+        var input = document.getElementById("input");
+        var id = document.getElementById("idSocket");
+
+        var output = document.getElementById("output");
+
+        socket.onmessage = function (e) {
+            var data = JSON.parse(e.data);
+            console.log(data);
+            switch (data.type) {
+                case "connection":
+                    connection(data);
+                    break;
+                case "msg":
+                    receiveMessage(data);
+                    break;
+            }
+        };
+
+        function connection(data) {
+            output.innerHTML += "Server: ID - " + data.content.id + "\n";
+        }
+
+        function receiveMessage(data) {
+            console.log(data);
+            output.innerHTML += "Server: " + data.content.value + "\n";
+        }
+
+        function send() {
+            var data = {
+                "type": "msg",
+                "socket_id": id.value,
+                "content": {
+                    "value": input.value
+                }
+            }
+            data = JSON.stringify(data);
+            socket.send(data);
+            input.value = "";
+        }
+    </script>
+</body>
+
+</html>
