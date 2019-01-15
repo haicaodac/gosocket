@@ -70,7 +70,7 @@ func (h *Hub) run() {
 					Type:    "disconnect",
 					Content: make(map[string]interface{}),
 				}
-				go socket.hub.onPacket(socket, message)
+				go h.onPacket(socket, message)
 				delete(h.sockets, socket)
 				close(socket.send)
 			}
@@ -196,4 +196,21 @@ func (h *Hub) onPacket(so *Socket, message Message) ([]interface{}, error) {
 func (h *Hub) Broadcast(message Message) {
 	empData, _ := json.Marshal(message)
 	h.broadcast <- empData
+}
+
+// BroadcastTo ...
+func (h *Hub) BroadcastTo(message Message) {
+	empData, _ := json.Marshal(message)
+	h.broadcastTo <- empData
+}
+
+// BroadcastRoom ...
+func (h *Hub) BroadcastRoom(name string, message Message) {
+	room := &Room{
+		ID: name,
+	}
+	data := make(map[*Room][]byte)
+	empData, _ := json.Marshal(message)
+	data[room] = empData
+	h.broadcastRoom <- data
 }
