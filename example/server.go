@@ -6,18 +6,18 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/haicaodac/gosocket"
+	gosocket "github.com/haicaodac/gosocket"
 )
 
 func main() {
 	// Websocket
-	server := socket.New()
-	server.On("connection", func(so *socket.Socket, message socket.Message) {
+	server := gosocket.New()
+	server.On("connection", func(so *gosocket.Socket, message gosocket.Message) {
 
 		message.Content["id"] = so.ID
 		so.Broadcast(message)
 
-		server.On("msg", func(so *socket.Socket, message socket.Message) {
+		server.On("msg", func(so *gosocket.Socket, message gosocket.Message) {
 			if message.SocketID != "" {
 				so.BroadcastTo(message)
 			} else {
@@ -27,7 +27,7 @@ func main() {
 	})
 
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
-		socket.Router(server, w, r)
+		gosocket.Router(server, w, r)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
