@@ -2,8 +2,11 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"net/http"
-	socket "socket/socket"
+
+	"github.com/haicaodac/gosocket"
 )
 
 func main() {
@@ -31,5 +34,6 @@ func main() {
 		http.ServeFile(w, r, "index.html")
 	})
 
-	http.ListenAndServe(":8080", nil)
+	fmt.Println("Server run ...")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

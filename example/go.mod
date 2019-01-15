@@ -1,6 +1,6 @@
-module socket
+module example
 
 require (
-	github.com/googollee/go-engine.io v0.0.0-20180829091931-e2f255711dcb
-	github.com/gorilla/websocket v1.4.0
+	github.com/gorilla/websocket v1.4.0 // indirect
+	github.com/haicaodac/gosocket v0.0.0-20190115052541-a1d5b865a40a
 )
