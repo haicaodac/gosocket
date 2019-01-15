@@ -75,7 +75,7 @@ func Router(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		Type:    "connection",
 		Content: make(map[string]interface{}),
 	}
-	socket.hub.onPacket(socket, message)
+	go socket.hub.onPacket(socket, message)
 	go socket.listenReadPump()
 	go socket.listenWritePump()
 }
@@ -103,7 +103,7 @@ func (s *Socket) listenReadPump() {
 			// s.Emit()
 		}
 
-		s.hub.onPacket(s, message)
+		go s.hub.onPacket(s, message)
 		// s.Broadcast(readDataByte)
 	}
 }
