@@ -57,6 +57,11 @@ type Message struct {
 
 // Router ..
 func Router(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	// Origin domain
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		return true
+	}
+	
 	conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
 	if err != nil {
 		log.Println("conn err", err)
