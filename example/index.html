@@ -9,7 +9,9 @@
     <input id="idSocket" type="text" placeholder="ID socket" />
     <button onclick="send()">Send</button>
     <pre id="output"></pre>
+    <script src="https://hanyny.com/gosocket/gosocket.js"></script>
     <script>
+        console.log(gosocket);
         var _url = "ws://localhost:8080/echo"
         var socket = null
         socket = new WebSocket(_url);
