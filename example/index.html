@@ -19,11 +19,12 @@
 
         var output = document.getElementById("output");
 
-        gosocket.on("connection", function(data) {
+        gosocket.on("connection", function (data) {
             output.innerHTML += "Server: ID - " + data.id + "\n";
         })
-        
-        gosocket.on("msg", function(data) {
+
+        gosocket.on("msg", function (data) {
+            console.log(data);
             output.innerHTML += "Server: " + data.value + "\n";
         })
 
