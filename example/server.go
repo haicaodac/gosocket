@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	gosocket "github.com/haicaodac/gosocket"
+	"github.com/haicaodac/gosocket"
 )
 
 func main() {
@@ -19,8 +19,7 @@ func main() {
 
 		server.On("msg", func(so *gosocket.Socket, message gosocket.Message) {
 			if message.Content["client_id"] != "" {
-				clientID := message.Content["client_id"]
-				so.BroadcastTo(clientID, message)
+				so.BroadcastTo(message.Content["client_id"], message)
 			} else {
 				so.Emit(message)
 			}

@@ -199,8 +199,8 @@ func (s *Server) Broadcast(message Message) {
 }
 
 // BroadcastTo ...
-func (s *Server) BroadcastTo(socketID string, message Message) {
-	message.SocketID = socketID
+func (s *Server) BroadcastTo(socketID interface{}, message Message) {
+	message.SocketID = socketID.(string)
 	empData, _ := json.Marshal(message)
 	s.broadcastTo <- empData
 }
