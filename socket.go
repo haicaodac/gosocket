@@ -155,32 +155,48 @@ func (s *Socket) listenWritePump() {
 }
 
 // Broadcast ...
-func (s *Socket) Broadcast(message Message) {
-	empData, _ := json.Marshal(message)
+func (s *Socket) Broadcast(message Message) error {
+	empData, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
 	s.server.broadcast <- empData
+	return nil
 }
 
 // BroadcastTo ...BroadcastTo
-func (s *Socket) BroadcastTo(socketID interface{}, message Message) {
+func (s *Socket) BroadcastTo(socketID interface{}, message Message) error {
 	message.SocketID = socketID.(string)
-	empData, _ := json.Marshal(message)
+	empData, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
 	s.server.broadcastTo <- empData
+	return nil
 }
 
 // BroadcastEmit ...
-func (s *Socket) BroadcastEmit(message Message) {
-	empData, _ := json.Marshal(message)
+func (s *Socket) BroadcastEmit(message Message) error {
+	empData, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
 	data := make(map[*Socket][]byte)
 	data[s] = empData
 	s.server.broadcastEmit <- data
+	return nil
 }
 
 // Emit ...
-func (s *Socket) Emit(message Message) {
-	empData, _ := json.Marshal(message)
+func (s *Socket) Emit(message Message) error {
+	empData, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
 	data := make(map[*Socket][]byte)
 	data[s] = empData
 	s.server.emit <- data
+	return nil
 }
 
 // Join ...
@@ -204,12 +220,16 @@ func (s *Socket) Leave(name string) {
 }
 
 // BroadcastRoom ...
-func (s *Socket) BroadcastRoom(name string, message Message) {
+func (s *Socket) BroadcastRoom(name string, message Message) error {
 	room := &Room{
 		ID: name,
 	}
 	data := make(map[*Room][]byte)
-	empData, _ := json.Marshal(message)
+	empData, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
 	data[room] = empData
 	s.server.broadcastRoom <- data
+	return nil
 }

@@ -193,25 +193,37 @@ func (s *Server) onPacket(so *Socket, message Message) ([]interface{}, error) {
 }
 
 // Broadcast ..
-func (s *Server) Broadcast(message Message) {
-	empData, _ := json.Marshal(message)
+func (s *Server) Broadcast(message Message) error {
+	empData, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
 	s.broadcast <- empData
+	return nil
 }
 
 // BroadcastTo ...
-func (s *Server) BroadcastTo(socketID interface{}, message Message) {
+func (s *Server) BroadcastTo(socketID interface{}, message Message) error {
 	message.SocketID = socketID.(string)
-	empData, _ := json.Marshal(message)
+	empData, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
 	s.broadcastTo <- empData
+	return nil
 }
 
 // BroadcastRoom ...
-func (s *Server) BroadcastRoom(name string, message Message) {
+func (s *Server) BroadcastRoom(name string, message Message) error {
 	room := &Room{
 		ID: name,
 	}
 	data := make(map[*Room][]byte)
-	empData, _ := json.Marshal(message)
+	empData, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
 	data[room] = empData
 	s.broadcastRoom <- data
+	return nil
 }
