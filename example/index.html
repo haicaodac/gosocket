@@ -11,49 +11,35 @@
     <pre id="output"></pre>
     <script src="https://hanyny.com/gosocket/gosocket.js"></script>
     <script>
-        console.log(gosocket);
         var _url = "ws://localhost:8080/echo"
-        var socket = null
-        socket = new WebSocket(_url);
+        gosocket = gosocket(_url);
 
         var input = document.getElementById("input");
         var id = document.getElementById("idSocket");
 
         var output = document.getElementById("output");
 
-        socket.onmessage = function (e) {
-            var data = JSON.parse(e.data);
-            console.log(data);
-            switch (data.type) {
-                case "connection":
-                    connection(data);
-                    break;
-                case "msg":
-                    receiveMessage(data);
-                    break;
-            }
-        };
-
-        function connection(data) {
-            output.innerHTML += "Server: ID - " + data.content.id + "\n";
-        }
-
-        function receiveMessage(data) {
-            console.log(data);
-            output.innerHTML += "Server: " + data.content.value + "\n";
-        }
+        gosocket.on("connection", function(data) {
+            output.innerHTML += "Server: ID - " + data.id + "\n";
+        })
+        
+        gosocket.on("msg", function(data) {
+            output.innerHTML += "Server: " + data.value + "\n";
+        })
 
         function send() {
-            var data = {
-                "type": "msg",
-                "socket_id": id.value,
-                "content": {
+            if (id.value) {
+                var data = {
+                    "socket_id": id.value,
+                    "value": input.value
+                }
+            } else {
+                var data = {
                     "value": input.value
                 }
             }
-            data = JSON.stringify(data);
-            socket.send(data);
-            input.value = "";
+            gosocket.emit("msg", data)
+            input.value = ""
         }
     </script>
 </body>

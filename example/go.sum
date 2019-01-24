@@ -1,4 +1,4 @@
 github.com/gorilla/websocket v1.4.0 h1:WDFjx/TMzVgy9VdMMQi2K2Emtwi2QcUQsztZ/zLaH/Q=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
-github.com/haicaodac/gosocket v0.0.0-20190124094307-df8342d16d6b h1:AVPDSpF2PpbpvmckneKRZZWGCMm2jaYnUF6Td9sAZA8=
-github.com/haicaodac/gosocket v0.0.0-20190124094307-df8342d16d6b/go.mod h1:P1PikIPpk3Yk3k+grv+RiyXxqw5H7Ov4VJgc1lXZmeU=
+github.com/haicaodac/gosocket v0.0.0-20190124094520-19aaa2c17920 h1:nfr2kbtZ9+ubFqcjB43+TRuoRqCDb1s8UGuHRK9dI1g=
+github.com/haicaodac/gosocket v0.0.0-20190124094520-19aaa2c17920/go.mod h1:P1PikIPpk3Yk3k+grv+RiyXxqw5H7Ov4VJgc1lXZmeU=

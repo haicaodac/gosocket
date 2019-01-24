@@ -18,10 +18,10 @@ func main() {
 		so.Broadcast(message)
 
 		server.On("msg", func(so *gosocket.Socket, message gosocket.Message) {
-			if message.Content["socket_id"] != "" {
+			if message.Content["socket_id"] != nil {
 				so.BroadcastTo(message.Content["socket_id"], message)
 			} else {
-				so.Emit(message)
+				so.Broadcast(message)
 			}
 		})
 	})
