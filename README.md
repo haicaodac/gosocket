@@ -1,4 +1,75 @@
-# Websocket in Golang
+# Go Socket
+
+# Struct 
+#### Message
+```sh
+type Message struct {
+	Type     string                 `json:"type"`
+	Room     string                 `json:"room"`
+	SocketID string                 `json:"socket_id"`
+	Content  map[string]interface{} `json:"content"`
+}
+```
+#### Socket
+```sh
+type Socket struct {
+    ID string
+    ...
+}
+```
+#### Server
+```sh
+type Server struct {
+    ...
+}
+```
+# API
+
+#### Struct Message
+
+
+#### Broadcast
+```sh
+so.Broadcast(message)
+
+or
+
+server.Broadcast(message)
+```
+#### BroadcastTo
+```sh
+if message.Content["socket_id"] != nil {
+    so.BroadcastTo(message.Content["socket_id"], message)
+}
+
+or 
+
+server.BroadcastTo(message.Content["socket_id"], message)
+```
+#### BroadcastEmit
+```sh
+so.BroadcastEmit(message)
+```
+#### Emit
+```sh
+so.Emit(message)
+```
+#### Join
+```sh
+so.Join("abc")
+```
+#### Leave
+```sh
+so.Leave("abc")
+```
+#### BroadcastRoom
+```sh
+so.BroadcastRoom("abc", message)
+
+or 
+
+server.BroadcastRoom("abc", message)
+```
 
 # Example
 
@@ -15,49 +86,37 @@ Create file **index.html**
     <input id="idSocket" type="text" placeholder="ID socket" />
     <button onclick="send()">Send</button>
     <pre id="output"></pre>
+    <script src="https://hanyny.com/gosocket/gosocket.js"></script>
     <script>
         var _url = "ws://localhost:8080/echo"
-        var socket = null
-        socket = new WebSocket(_url);
+        gosocket = gosocket(_url);
 
         var input = document.getElementById("input");
         var id = document.getElementById("idSocket");
 
         var output = document.getElementById("output");
 
-        socket.onmessage = function (e) {
-            var data = JSON.parse(e.data);
-            console.log(data);
-            switch (data.type) {
-                case "connection":
-                    connection(data);
-                    break;
-                case "msg":
-                    receiveMessage(data);
-                    break;
-            }
-        };
+        gosocket.on("connection", function (data) {
+            output.innerHTML += "Server: ID - " + data.id + "\n";
+        })
 
-        function connection(data) {
-            output.innerHTML += "Server: ID - " + data.content.id + "\n";
-        }
-
-        function receiveMessage(data) {
-            console.log(data);
-            output.innerHTML += "Server: " + data.content.value + "\n";
-        }
+        gosocket.on("msg", function (data) {
+            output.innerHTML += "Server: " + data.value + "\n";
+        })
 
         function send() {
-            var data = {
-                "type": "msg",
-                "socket_id": id.value,
-                "content": {
+            if (id.value) {
+                var data = {
+                    "socket_id": id.value,
+                    "value": input.value
+                }
+            } else {
+                var data = {
                     "value": input.value
                 }
             }
-            data = JSON.stringify(data);
-            socket.send(data);
-            input.value = "";
+            gosocket.emit("msg", data)
+            input.value = ""
         }
     </script>
 </body>
@@ -86,10 +145,10 @@ func main() {
 		so.Broadcast(message)
 
 		server.On("msg", func(so *gosocket.Socket, message gosocket.Message) {
-			if message.SocketID != "" {
-				so.BroadcastTo(message)
+			if message.Content["socket_id"] != nil {
+				so.BroadcastTo(message.Content["socket_id"], message)
 			} else {
-				so.Emit(message)
+				so.Broadcast(message)
 			}
 		})
 	})
@@ -105,7 +164,6 @@ func main() {
 	fmt.Println("Server run ...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
-
 ```
 # Run server
 ```sh

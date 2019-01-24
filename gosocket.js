@@ -7,11 +7,8 @@
         gosocketEvents[type] = func;
     }
     gosocketListen.emit = function (type, data) {
-        function isObject(o) {
-            return o !== null && typeof o === 'object' && Array.isArray(o) === false;
-        }
-        if (!isObject(data)) {
-            new Error("The data must be json");
+        if (!data || typeof data !== "object" || data.length > 0) {
+            throw new Error("The data must be json");
         }
         var message = {
             "type": type,
@@ -23,12 +20,16 @@
 
     window.gosocket = function (url) {
         if (!url) {
-            return new Error("URL not found!");
+            throw new Error("URL not found!");
         }
         gosocketServer = new WebSocket(url);
         gosocketServer.onmessage = function (e) {
-            var data = JSON.parse(e.data);
-            if (data.type) {
+            try {
+                var data = JSON.parse(e.data);
+            } catch (e) {
+                console.Error("The data must be json");
+            }
+            if (data && data.type) {
                 var func = gosocketEvents[data.type];
                 if (func) {
                     func(data.content)
