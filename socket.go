@@ -33,11 +33,11 @@ var (
 	space   = []byte{' '}
 )
 
-// Socket is a middleman between the websocket connection and the hub.
+// Socket is a middleman between the websocket connection and the server.
 type Socket struct {
-	hub  *Hub
-	conn *websocket.Conn
-	send chan []byte
+	server *Server
+	conn   *websocket.Conn
+	send   chan []byte
 
 	ID string
 }
@@ -56,38 +56,38 @@ type Message struct {
 }
 
 // Router ..
-func Router(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 	// Origin domain
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return true
 	}
-	
+
 	conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
 	if err != nil {
 		log.Println("conn err", err)
 	}
 	socket := &Socket{
-		hub:  hub,
-		conn: conn,
-		send: make(chan []byte, 256),
+		server: server,
+		conn:   conn,
+		send:   make(chan []byte, 256),
 
 		ID: createID(32),
 	}
 
-	socket.hub.register <- socket
+	socket.server.register <- socket
 
 	message := Message{
 		Type:    "connection",
 		Content: make(map[string]interface{}),
 	}
-	go socket.hub.onPacket(socket, message)
+	go socket.server.onPacket(socket, message)
 	go socket.listenReadPump()
 	go socket.listenWritePump()
 }
 
 func (s *Socket) listenReadPump() {
 	defer func() {
-		s.hub.unregister <- s
+		s.server.unregister <- s
 		s.conn.Close()
 	}()
 	s.conn.SetReadLimit(maxMessageSize)
@@ -108,7 +108,7 @@ func (s *Socket) listenReadPump() {
 			// s.Emit()
 		}
 
-		go s.hub.onPacket(s, message)
+		go s.server.onPacket(s, message)
 		// s.Broadcast(readDataByte)
 	}
 }
@@ -124,7 +124,7 @@ func (s *Socket) listenWritePump() {
 		case message, ok := <-s.send:
 			s.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				// The hub closed the channel.
+				// The server closed the channel.
 				s.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -157,13 +157,14 @@ func (s *Socket) listenWritePump() {
 // Broadcast ...
 func (s *Socket) Broadcast(message Message) {
 	empData, _ := json.Marshal(message)
-	s.hub.broadcast <- empData
+	s.server.broadcast <- empData
 }
 
 // BroadcastTo ...BroadcastTo
-func (s *Socket) BroadcastTo(message Message) {
+func (s *Socket) BroadcastTo(socketID string, message Message) {
+	message.SocketID = socketID
 	empData, _ := json.Marshal(message)
-	s.hub.broadcastTo <- empData
+	s.server.broadcastTo <- empData
 }
 
 // BroadcastEmit ...
@@ -171,7 +172,7 @@ func (s *Socket) BroadcastEmit(message Message) {
 	empData, _ := json.Marshal(message)
 	data := make(map[*Socket][]byte)
 	data[s] = empData
-	s.hub.broadcastEmit <- data
+	s.server.broadcastEmit <- data
 }
 
 // Emit ...
@@ -179,7 +180,7 @@ func (s *Socket) Emit(message Message) {
 	empData, _ := json.Marshal(message)
 	data := make(map[*Socket][]byte)
 	data[s] = empData
-	s.hub.emit <- data
+	s.server.emit <- data
 }
 
 // Join ...
@@ -189,7 +190,7 @@ func (s *Socket) Join(name string) {
 	}
 	data := make(map[*Room]*Socket)
 	data[room] = s
-	s.hub.join <- data
+	s.server.join <- data
 }
 
 // Leave ...
@@ -199,7 +200,7 @@ func (s *Socket) Leave(name string) {
 	}
 	data := make(map[*Room]*Socket)
 	data[room] = s
-	s.hub.leave <- data
+	s.server.leave <- data
 }
 
 // BroadcastRoom ...
@@ -210,5 +211,5 @@ func (s *Socket) BroadcastRoom(name string, message Message) {
 	data := make(map[*Room][]byte)
 	empData, _ := json.Marshal(message)
 	data[room] = empData
-	s.hub.broadcastRoom <- data
+	s.server.broadcastRoom <- data
 }

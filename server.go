@@ -5,8 +5,8 @@ import (
 	"sync"
 )
 
-// Hub maintains the set of active clients and broadcasts messages to the
-type Hub struct {
+// Server maintains the set of active clients and broadcasts messages to the
+type Server struct {
 	events map[string]*caller
 	evMu   sync.Mutex
 
@@ -25,8 +25,8 @@ type Hub struct {
 }
 
 // New ...
-func New() *Hub {
-	hub := &Hub{
+func New() *Server {
+	Server := &Server{
 		events: make(map[string]*caller),
 		evMu:   sync.Mutex{},
 
@@ -45,12 +45,12 @@ func New() *Hub {
 		join:  make(chan map[*Room]*Socket),
 		leave: make(chan map[*Room]*Socket),
 	}
-	go hub.run()
-	return hub
+	go Server.run()
+	return Server
 }
 
 // Run ...
-func (h *Hub) run() {
+func (s *Server) run() {
 	for {
 		select {
 
@@ -62,44 +62,44 @@ func (h *Hub) run() {
 		* BroadcastEmit
 		* Emit
 		 */
-		case socket := <-h.register:
-			h.sockets[socket] = true
-		case socket := <-h.unregister:
-			if _, ok := h.sockets[socket]; ok {
+		case socket := <-s.register:
+			s.sockets[socket] = true
+		case socket := <-s.unregister:
+			if _, ok := s.sockets[socket]; ok {
 				message := Message{
 					Type:    "disconnect",
 					Content: make(map[string]interface{}),
 				}
-				go h.onPacket(socket, message)
-				delete(h.sockets, socket)
+				go s.onPacket(socket, message)
+				delete(s.sockets, socket)
 				close(socket.send)
 			}
 
 		//Send message to all socket
-		case message := <-h.broadcast:
-			for socket := range h.sockets {
+		case message := <-s.broadcast:
+			for socket := range s.sockets {
 				select {
 				case socket.send <- message:
 				default:
 					close(socket.send)
-					delete(h.sockets, socket)
+					delete(s.sockets, socket)
 				}
 			}
 
 		//Send message to specific socket by socket_id
-		case message := <-h.broadcastTo:
+		case message := <-s.broadcastTo:
 			var msg Message
 			json.Unmarshal(message, &msg)
-			for socket := range h.sockets {
+			for socket := range s.sockets {
 				if socket.ID == msg.SocketID {
 					socket.send <- message
 				}
 			}
 
 		// Send message to other user except myself
-		case message := <-h.broadcastEmit:
+		case message := <-s.broadcastEmit:
 			for so, msg := range message {
-				for socket := range h.sockets {
+				for socket := range s.sockets {
 					if socket.ID != so.ID {
 						socket.send <- msg
 					}
@@ -107,9 +107,9 @@ func (h *Hub) run() {
 			}
 
 		// Send message to myself
-		case message := <-h.emit:
+		case message := <-s.emit:
 			for so, msg := range message {
-				for socket := range h.sockets {
+				for socket := range s.sockets {
 					if socket.ID == so.ID {
 						socket.send <- msg
 					}
@@ -125,24 +125,24 @@ func (h *Hub) run() {
 		 */
 
 		// A socket join a room
-		case data := <-h.join:
+		case data := <-s.join:
 			for room, so := range data {
-				h.rooms[room][so] = true
+				s.rooms[room][so] = true
 			}
 
 		// A socket leave room
-		case data := <-h.leave:
+		case data := <-s.leave:
 			for room, so := range data {
-				if _, ok := h.rooms[room][so]; ok {
-					delete(h.rooms[room], so)
+				if _, ok := s.rooms[room][so]; ok {
+					delete(s.rooms[room], so)
 					// close(so.send) Rời phòng
 				}
 			}
 
 		// Send message to every socket in specific room by room_id
-		case message := <-h.broadcastRoom:
+		case message := <-s.broadcastRoom:
 			for ro, msg := range message {
-				for room, sockets := range h.rooms {
+				for room, sockets := range s.rooms {
 					if room.ID == ro.ID {
 						for socket := range sockets {
 							socket.send <- msg
@@ -156,21 +156,21 @@ func (h *Hub) run() {
 }
 
 // On registers the function f to handle an event.
-func (h *Hub) On(event string, f interface{}) error {
+func (s *Server) On(event string, f interface{}) error {
 	c, err := newCaller(f)
 	if err != nil {
 		return err
 	}
-	h.evMu.Lock()
-	h.events[event] = c
-	h.evMu.Unlock()
+	s.evMu.Lock()
+	s.events[event] = c
+	s.evMu.Unlock()
 	return nil
 }
 
-func (h *Hub) onPacket(so *Socket, message Message) ([]interface{}, error) {
-	h.evMu.Lock()
-	c, ok := h.events[message.Type]
-	h.evMu.Unlock()
+func (s *Server) onPacket(so *Socket, message Message) ([]interface{}, error) {
+	s.evMu.Lock()
+	c, ok := s.events[message.Type]
+	s.evMu.Unlock()
 	if !ok {
 		return nil, nil
 	}
@@ -193,24 +193,25 @@ func (h *Hub) onPacket(so *Socket, message Message) ([]interface{}, error) {
 }
 
 // Broadcast ..
-func (h *Hub) Broadcast(message Message) {
+func (s *Server) Broadcast(message Message) {
 	empData, _ := json.Marshal(message)
-	h.broadcast <- empData
+	s.broadcast <- empData
 }
 
 // BroadcastTo ...
-func (h *Hub) BroadcastTo(message Message) {
+func (s *Server) BroadcastTo(socketID string, message Message) {
+	message.SocketID = socketID
 	empData, _ := json.Marshal(message)
-	h.broadcastTo <- empData
+	s.broadcastTo <- empData
 }
 
 // BroadcastRoom ...
-func (h *Hub) BroadcastRoom(name string, message Message) {
+func (s *Server) BroadcastRoom(name string, message Message) {
 	room := &Room{
 		ID: name,
 	}
 	data := make(map[*Room][]byte)
 	empData, _ := json.Marshal(message)
 	data[room] = empData
-	h.broadcastRoom <- data
+	s.broadcastRoom <- data
 }
