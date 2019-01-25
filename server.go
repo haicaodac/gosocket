@@ -73,6 +73,15 @@ func (s *Server) run() {
 				go s.onPacket(socket, message)
 				delete(s.sockets, socket)
 				close(socket.send)
+
+				// Client out rooms
+				for room, sockets := range s.rooms {
+					for socketRom := range sockets {
+						if socket.ID == socketRom.ID {
+							delete(s.rooms[room], socket)
+						}
+					}
+				}
 			}
 
 		//Send message to all socket
@@ -81,8 +90,7 @@ func (s *Server) run() {
 				select {
 				case socket.send <- message:
 				default:
-					close(socket.send)
-					delete(s.sockets, socket)
+					s.unregister <- socket
 				}
 			}
 

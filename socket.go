@@ -233,3 +233,8 @@ func (s *Socket) BroadcastRoom(name string, message Message) error {
 	s.server.broadcastRoom <- data
 	return nil
 }
+
+// Disconnect ...
+func (s *Socket) Disconnect() {
+	s.server.unregister <- s
+}
