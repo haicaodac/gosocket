@@ -17,6 +17,9 @@
         message = JSON.stringify(message);
         gosocketServer.send(message)
     }
+    gosocketListen.close = function() {
+        gosocketServer.close();
+    }
 
     window.gosocket = function (url) {
         if (!url) {
@@ -35,7 +38,20 @@
                     func(data.content)
                 }
             }
-        }
+        };
+        gosocketServer.onerror = function(event) {
+            var func = gosocketEvents["onerror"];
+            if (func) {
+                func(event)
+            }
+        };
+        gosocketServer.onclose = function(event) {
+            var func = gosocketEvents["onclose"];
+            if (func) {
+                func(event)
+            }
+        };
+
         return gosocketListen;
     }
 })(window.gosocketListen);
