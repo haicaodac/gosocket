@@ -153,7 +153,11 @@ func (s *Server) run() {
 				for room, sockets := range s.rooms {
 					if room.ID == ro.ID {
 						for socket := range sockets {
-							socket.send <- msg
+							select {
+							case socket.send <- msg:
+							default:
+								s.unregister <- socket
+							}
 						}
 					}
 				}
