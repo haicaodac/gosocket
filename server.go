@@ -215,8 +215,8 @@ func (s *Server) Broadcast(message Message) error {
 }
 
 // BroadcastTo ...
-func (s *Server) BroadcastTo(socketID interface{}, message Message) error {
-	message.SocketID = socketID.(string)
+func (s *Server) BroadcastTo(socketID string, message Message) error {
+	message.SocketID = socketID
 	empData, err := json.Marshal(message)
 	if err != nil {
 		return err
