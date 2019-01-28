@@ -1,7 +1,6 @@
 package gosocket
 
 import (
-	"encoding/json"
 	"sync"
 )
 
@@ -11,17 +10,17 @@ type Server struct {
 	evMu   sync.Mutex
 
 	sockets       map[*Socket]bool
-	broadcast     chan []byte
-	broadcastTo   chan []byte
-	broadcastEmit chan map[*Socket][]byte
-	emit          chan map[*Socket][]byte
+	broadcast     chan subscription
+	broadcastTo   chan subscription
+	broadcastEmit chan subscription
+	emit          chan subscription
 	register      chan *Socket
 	unregister    chan *Socket
 
-	rooms         map[*Room]map[*Socket]bool
-	join          chan map[*Room]*Socket
-	leave         chan map[*Room]*Socket
-	broadcastRoom chan map[*Room][]byte
+	rooms         map[string]map[*Socket]bool
+	join          chan subscription
+	leave         chan subscription
+	broadcastRoom chan subscription
 }
 
 // New ...
@@ -31,19 +30,19 @@ func New() *Server {
 		evMu:   sync.Mutex{},
 
 		sockets: make(map[*Socket]bool),
-		rooms:   make(map[*Room]map[*Socket]bool),
+		rooms:   make(map[string]map[*Socket]bool),
 
-		emit:          make(chan map[*Socket][]byte),
-		broadcast:     make(chan []byte),
-		broadcastTo:   make(chan []byte),
-		broadcastRoom: make(chan map[*Room][]byte),
-		broadcastEmit: make(chan map[*Socket][]byte),
+		emit:          make(chan subscription),
+		broadcast:     make(chan subscription),
+		broadcastTo:   make(chan subscription),
+		broadcastRoom: make(chan subscription),
+		broadcastEmit: make(chan subscription),
 
 		register:   make(chan *Socket),
 		unregister: make(chan *Socket),
 
-		join:  make(chan map[*Room]*Socket),
-		leave: make(chan map[*Room]*Socket),
+		join:  make(chan subscription),
+		leave: make(chan subscription),
 	}
 	go Server.run()
 	return Server
@@ -85,7 +84,8 @@ func (s *Server) run() {
 			}
 
 		//Send message to all socket
-		case message := <-s.broadcast:
+		case subscription := <-s.broadcast:
+			message := parseMessage(subscription.message)
 			for socket := range s.sockets {
 				select {
 				case socket.send <- message:
@@ -95,34 +95,27 @@ func (s *Server) run() {
 			}
 
 		//Send message to specific socket by socket_id
-		case message := <-s.broadcastTo:
-			var msg Message
-			json.Unmarshal(message, &msg)
+		case subscription := <-s.broadcastTo:
+			message := parseMessage(subscription.message)
 			for socket := range s.sockets {
-				if socket.ID == msg.SocketID {
+				if socket.ID == subscription.socketID {
 					socket.send <- message
 				}
 			}
 
 		// Send message to other user except myself
-		case message := <-s.broadcastEmit:
-			for so, msg := range message {
-				for socket := range s.sockets {
-					if socket.ID != so.ID {
-						socket.send <- msg
-					}
+		case subscription := <-s.broadcastEmit:
+			message := parseMessage(subscription.message)
+			for socket := range s.sockets {
+				if socket.ID != subscription.socket.ID {
+					socket.send <- message
 				}
 			}
 
 		// Send message to myself
-		case message := <-s.emit:
-			for so, msg := range message {
-				for socket := range s.sockets {
-					if socket.ID == so.ID {
-						socket.send <- msg
-					}
-				}
-			}
+		case subscription := <-s.emit:
+			message := parseMessage(subscription.message)
+			subscription.socket.send <- message
 
 			// End event about socket
 
@@ -133,32 +126,37 @@ func (s *Server) run() {
 		 */
 
 		// A socket join a room
-		case data := <-s.join:
-			for room, so := range data {
-				s.rooms[room][so] = true
+		case subscription := <-s.join:
+			if len(s.rooms[subscription.room]) == 0 {
+				s.rooms[subscription.room] = make(map[*Socket]bool)
 			}
+			s.rooms[subscription.room][subscription.socket] = true
 
 		// A socket leave room
-		case data := <-s.leave:
-			for room, so := range data {
-				if _, ok := s.rooms[room][so]; ok {
-					delete(s.rooms[room], so)
-					// close(so.send) Rời phòng
-				}
+		case subscription := <-s.leave:
+			if _, ok := s.rooms[subscription.room][subscription.socket]; ok {
+				delete(s.rooms[subscription.room], subscription.socket)
+				// close(so.send) Rời phòng
 			}
 
 		// Send message to every socket in specific room by room_id
-		case message := <-s.broadcastRoom:
-			for ro, msg := range message {
-				for room, sockets := range s.rooms {
-					if room.ID == ro.ID {
-						for socket := range sockets {
-							select {
-							case socket.send <- msg:
-							default:
-								s.unregister <- socket
-							}
-						}
+		case subscription := <-s.broadcastRoom:
+			message := parseMessage(subscription.message)
+			flag := true // Validator socket in room
+			if subscription.socket != nil {
+				flag = false
+				for socket := range s.rooms[subscription.room] {
+					if socket.ID == subscription.socket.ID {
+						flag = true
+					}
+				}
+			}
+			if flag {
+				for socket := range s.rooms[subscription.room] {
+					select {
+					case socket.send <- message:
+					default:
+						s.unregister <- socket
 					}
 				}
 			}
@@ -205,37 +203,35 @@ func (s *Server) onPacket(so *Socket, message Message) ([]interface{}, error) {
 }
 
 // Broadcast ..
-func (s *Server) Broadcast(message Message) error {
-	empData, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
-	s.broadcast <- empData
-	return nil
+func (s *Server) Broadcast(message Message) {
+	subscription := subscription{}
+	subscription.message = message
+	s.broadcast <- subscription
 }
 
 // BroadcastTo ...
-func (s *Server) BroadcastTo(socketID string, message Message) error {
-	message.SocketID = socketID
-	empData, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
-	s.broadcastTo <- empData
-	return nil
+func (s *Server) BroadcastTo(socketID string, message Message) {
+	subscription := subscription{}
+	subscription.socketID = socketID
+	subscription.message = message
+	s.broadcastTo <- subscription
 }
 
 // BroadcastRoom ...
-func (s *Server) BroadcastRoom(name string, message Message) error {
-	room := &Room{
-		ID: name,
-	}
-	data := make(map[*Room][]byte)
-	empData, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
-	data[room] = empData
-	s.broadcastRoom <- data
-	return nil
+func (s *Server) BroadcastRoom(name string, message Message) {
+	subscription := subscription{}
+	subscription.room = name
+	subscription.message = message
+	s.broadcastRoom <- subscription
+}
+
+// CountRoom ...
+func (s *Server) CountRoom() int {
+	return len(s.rooms)
+}
+
+// CountSocketInRoom ...
+func (s *Server) CountSocketInRoom(name string) int {
+	count := len(s.rooms[name])
+	return count
 }

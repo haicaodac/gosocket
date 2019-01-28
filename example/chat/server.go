@@ -18,7 +18,7 @@ func main() {
 		so.Broadcast(message)
 
 		server.On("msg", func(so *gosocket.Socket, message gosocket.Message) {
-			if message.Content["socket_id"] != nil && message.Content["socket_id"] != "" {
+			if !gosocket.IsBlank(message.Content["socket_id"]) {
 				socketID := message.Content["socket_id"].(string)
 				so.BroadcastTo(socketID, message)
 			} else {

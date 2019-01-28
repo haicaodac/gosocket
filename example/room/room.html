@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head></head>
+
+<body>
+    <!-- websockets.html -->
+    <div>
+        <input id="nameRoom" type="text" value="" placeholder="Name room" />
+        <p>Room: <span id="room"></span></p>
+        <p>User: <span id="count_user"></span></p>
+        <button onclick="join()">Join</button>
+        <button onclick="leave()">Leave</button>
+    </div>
+    </br>
+    </br>
+    <div>
+        <input id="input" type="text" value="" placeholder="Message" />
+        <button onclick="send()">Send</button>
+        <pre id="output"></pre>
+    </div>
+    <script src="https://hanyny.com/gosocket/gosocket.js"></script>
+    <script>
+        var _url = "ws://localhost:8080/echo"
+        gosocket = gosocket(_url);
+
+        var input = document.getElementById("input");
+        var roomName = document.getElementById("nameRoom");
+
+        var output = document.getElementById("output");
+        var room = document.getElementById("room");
+        gosocket.on("connection", function (data) {
+            output.innerHTML += "Server: ID - " + data.id + "\n";
+        })
+
+        // Message
+        function send() {
+            var data = {
+                "room": roomName.value,
+                "value": input.value
+            }
+            gosocket.emit("msg", data)
+            input.value = ""
+        }
+
+        gosocket.on("msg", function (data) {
+            output.innerHTML += "Server: " + data.value + "\n";
+        })
+
+        // room
+        function join() {
+            var data = {
+                "room": roomName.value
+            }
+            gosocket.emit("join", data)
+        }
+
+        function leave() {
+            var data = {
+                "room": roomName.value
+            }
+            gosocket.emit("leave", data)
+        }
+
+        gosocket.on("join", function (data) {
+            room.innerHTML += data.room;
+            count_user.innerHTML += data.count_user;
+        })
+
+        gosocket.on("leave", function (data) {
+            output.innerHTML += data.message;
+        })
+    </script>
+</body>
+
+</html>

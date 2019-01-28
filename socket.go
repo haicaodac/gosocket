@@ -1,7 +1,6 @@
 package gosocket
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -42,17 +41,17 @@ type Socket struct {
 	ID string
 }
 
-// Room ...
-type Room struct {
-	ID string
+type subscription struct {
+	socket   *Socket
+	socketID string
+	room     string
+	message  Message
 }
 
 // Message ...
 type Message struct {
-	Type     string                 `json:"type"`
-	Room     string                 `json:"room"`
-	SocketID string                 `json:"socket_id"`
-	Content  map[string]interface{} `json:"content"`
+	Type    string                 `json:"type"`
+	Content map[string]interface{} `json:"content"`
 }
 
 // Router ..
@@ -102,11 +101,7 @@ func (s *Socket) listenReadPump() {
 			break
 		}
 
-		var message Message
-		if err := json.Unmarshal(readDataByte, &message); err != nil {
-			log.Println("err", err)
-			// s.Emit()
-		}
+		message := parseByteToMessage(readDataByte)
 
 		go s.server.onPacket(s, message)
 		// s.Broadcast(readDataByte)
@@ -155,83 +150,58 @@ func (s *Socket) listenWritePump() {
 }
 
 // Broadcast ...
-func (s *Socket) Broadcast(message Message) error {
-	empData, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
-	s.server.broadcast <- empData
-	return nil
+func (s *Socket) Broadcast(message Message) {
+	subscription := subscription{}
+	subscription.message = message
+	s.server.broadcast <- subscription
 }
 
 // BroadcastTo ...BroadcastTo
-func (s *Socket) BroadcastTo(socketID string, message Message) error {
-	message.SocketID = socketID
-	empData, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
-	s.server.broadcastTo <- empData
-	return nil
+func (s *Socket) BroadcastTo(socketID string, message Message) {
+	subscription := subscription{}
+	subscription.socketID = socketID
+	subscription.message = message
+	s.server.broadcastTo <- subscription
 }
 
 // BroadcastEmit ...
-func (s *Socket) BroadcastEmit(message Message) error {
-	empData, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
-	data := make(map[*Socket][]byte)
-	data[s] = empData
-	s.server.broadcastEmit <- data
-	return nil
+func (s *Socket) BroadcastEmit(message Message) {
+	subscription := subscription{}
+	subscription.message = message
+	s.server.broadcastEmit <- subscription
 }
 
 // Emit ...
-func (s *Socket) Emit(message Message) error {
-	empData, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
-	data := make(map[*Socket][]byte)
-	data[s] = empData
-	s.server.emit <- data
-	return nil
+func (s *Socket) Emit(message Message) {
+	subscription := subscription{}
+	subscription.message = message
+	subscription.socket = s
+	s.server.emit <- subscription
 }
 
 // Join ...
 func (s *Socket) Join(name string) {
-	room := &Room{
-		ID: name,
-	}
-	data := make(map[*Room]*Socket)
-	data[room] = s
-	s.server.join <- data
+	subscription := subscription{}
+	subscription.room = name
+	subscription.socket = s
+	s.server.join <- subscription
 }
 
 // Leave ...
 func (s *Socket) Leave(name string) {
-	room := &Room{
-		ID: name,
-	}
-	data := make(map[*Room]*Socket)
-	data[room] = s
-	s.server.leave <- data
+	subscription := subscription{}
+	subscription.room = name
+	subscription.socket = s
+	s.server.leave <- subscription
 }
 
 // BroadcastRoom ...
-func (s *Socket) BroadcastRoom(name string, message Message) error {
-	room := &Room{
-		ID: name,
-	}
-	data := make(map[*Room][]byte)
-	empData, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
-	data[room] = empData
-	s.server.broadcastRoom <- data
-	return nil
+func (s *Socket) BroadcastRoom(name string, message Message) {
+	subscription := subscription{}
+	subscription.socket = s
+	subscription.room = name
+	subscription.message = message
+	s.server.broadcastRoom <- subscription
 }
 
 // Disconnect ...
