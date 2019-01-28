@@ -1,12 +1,15 @@
 # Go Socket
 
+A Websocket application. It is designed based on socket.io, it helps socket.io learners easily access the Websocket in Golang
+
+##### Example: Chat only and multi
+##### Example: Chat room
+
 # Struct 
 #### Message
 ```sh
 type Message struct {
 	Type     string                 `json:"type"`
-	Room     string                 `json:"room"`
-	SocketID string                 `json:"socket_id"`
 	Content  map[string]interface{} `json:"content"`
 }
 ```
@@ -24,9 +27,6 @@ type Server struct {
 }
 ```
 # API
-
-#### Struct Message
-
 
 #### Broadcast
 ```sh
@@ -146,7 +146,7 @@ func main() {
 		so.Broadcast(message)
 
 		server.On("msg", func(so *gosocket.Socket, message gosocket.Message) {
-			if message.Content["socket_id"] != nil && message.Content["socket_id"] != "" {
+			if !gosocket.IsBlank(message.Content["socket_id"]) {
 				socketID := message.Content["socket_id"].(string)
 				so.BroadcastTo(socketID, message)
 			} else {
@@ -166,6 +166,7 @@ func main() {
 	fmt.Println("Server run ...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
 
 ```
 # Run server
