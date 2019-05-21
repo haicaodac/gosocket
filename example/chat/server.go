@@ -25,6 +25,11 @@ func main() {
 				so.Broadcast(message)
 			}
 		})
+
+		server.On("disconnect", func(so *gosocket.Socket, message gosocket.Message) {
+			message.Content["message"] = "User: " + so.ID + " out room"
+			server.Broadcast(message)
+		})
 	})
 
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +40,6 @@ func main() {
 		http.ServeFile(w, r, "index.html")
 	})
 
-	fmt.Println("Server run ...")
+	fmt.Println("Server run port: 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

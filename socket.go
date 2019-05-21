@@ -95,6 +95,7 @@ func (s *Socket) listenReadPump() {
 	for {
 		_, readDataByte, err := s.conn.ReadMessage()
 		if err != nil {
+			s.Disconnect()
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
