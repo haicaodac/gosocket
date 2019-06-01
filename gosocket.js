@@ -17,15 +17,18 @@
         message = JSON.stringify(message);
         gosocketServer.send(message)
     }
-    gosocketListen.close = function() {
+    gosocketListen.close = function () {
         gosocketServer.close();
     }
 
-    window.gosocket = function (url) {
+    var connectSocket = function (url) {
         if (!url) {
             throw new Error("URL not found!");
         }
         gosocketServer = new WebSocket(url);
+        gosocketServer.onopen = function () {
+            console.log("OPEN");
+        }
         gosocketServer.onmessage = function (e) {
             try {
                 var data = JSON.parse(e.data);
@@ -39,20 +42,26 @@
                 }
             }
         };
-        gosocketServer.onerror = function(event) {
+        gosocketServer.onerror = function (event) {
             var func = gosocketEvents["onerror"];
             if (func) {
                 func(event)
             }
+            gosocketServer.close();
         };
-        gosocketServer.onclose = function(event) {
+        gosocketServer.onclose = function (event) {
             var func = gosocketEvents["onclose"];
             if (func) {
                 func(event)
             }
+            setTimeout(function () {
+                window.gosocket = connectSocket(url)
+            }, 1000);
         };
 
         return gosocketListen;
     }
+
+    window.gosocket = connectSocket
 })(window.gosocketListen);
 var gosocket = window.gosocket;
