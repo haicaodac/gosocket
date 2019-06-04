@@ -169,6 +169,7 @@ func (s *Socket) BroadcastTo(socketID string, message Message) {
 func (s *Socket) BroadcastEmit(message Message) {
 	subscription := subscription{}
 	subscription.message = message
+	subscription.socket = s
 	s.server.broadcastEmit <- subscription
 }
 
@@ -185,7 +186,7 @@ func (s *Socket) Join(name string) {
 	subscription := subscription{}
 	subscription.room = name
 	subscription.socket = s
-	s.server.join <- subscription
+	s.server.Join(subscription)
 }
 
 // Leave ...
@@ -193,7 +194,7 @@ func (s *Socket) Leave(name string) {
 	subscription := subscription{}
 	subscription.room = name
 	subscription.socket = s
-	s.server.leave <- subscription
+	s.server.Leave(subscription)
 }
 
 // BroadcastRoom ...

@@ -1,6 +1,7 @@
 package gosocket
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -107,6 +108,8 @@ func (s *Server) run() {
 		case subscription := <-s.broadcastEmit:
 			message := parseMessage(subscription.message)
 			for socket := range s.sockets {
+				fmt.Println(socket.ID)
+				fmt.Println(subscription.socket.ID)
 				if socket.ID != subscription.socket.ID {
 					socket.send <- message
 				}
@@ -120,24 +123,8 @@ func (s *Server) run() {
 			// End event about socket
 
 		/* Event about room
-		* Join
-		* Leave
 		* BroadcastRoom
 		 */
-
-		// A socket join a room
-		case subscription := <-s.join:
-			if len(s.rooms[subscription.room]) == 0 {
-				s.rooms[subscription.room] = make(map[*Socket]bool)
-			}
-			s.rooms[subscription.room][subscription.socket] = true
-
-		// A socket leave room
-		case subscription := <-s.leave:
-			if _, ok := s.rooms[subscription.room][subscription.socket]; ok {
-				delete(s.rooms[subscription.room], subscription.socket)
-				// close(so.send) Rời phòng
-			}
 
 		// Send message to every socket in specific room by room_id
 		case subscription := <-s.broadcastRoom:
@@ -225,6 +212,22 @@ func (s *Server) BroadcastRoom(name string, message Message) {
 	s.broadcastRoom <- subscription
 }
 
+// Join ...
+func (s *Server) Join(subscription subscription) {
+	if len(s.rooms[subscription.room]) == 0 {
+		s.rooms[subscription.room] = make(map[*Socket]bool)
+	}
+	s.rooms[subscription.room][subscription.socket] = true
+}
+
+// Leave ...
+func (s *Server) Leave(subscription subscription) {
+	if _, ok := s.rooms[subscription.room][subscription.socket]; ok {
+		delete(s.rooms[subscription.room], subscription.socket)
+		// close(so.send) Rời phòng
+	}
+}
+
 // CountRoom ...
 func (s *Server) CountRoom() int {
 	return len(s.rooms)
@@ -232,6 +235,7 @@ func (s *Server) CountRoom() int {
 
 // CountSocketInRoom ...
 func (s *Server) CountSocketInRoom(name string) int {
+	// fmt.Println("2")
 	count := len(s.rooms[name])
 	return count
 }
