@@ -1,6 +1,6 @@
 (function (gosocketListen) {
     var gosocketServer = null;
-    gosocketEvents = [];
+    var gosocketEvents = [];
 
     gosocketListen = {};
     gosocketListen.on = function (type, func) {
