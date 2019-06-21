@@ -3,6 +3,7 @@ package gosocket
 import (
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -37,8 +38,8 @@ type Socket struct {
 	server *Server
 	conn   *websocket.Conn
 	send   chan []byte
-
-	ID string
+	evMu   sync.Mutex
+	ID     string
 }
 
 type subscription struct {
@@ -69,6 +70,7 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 		server: server,
 		conn:   conn,
 		send:   make(chan []byte, 256),
+		evMu:   sync.Mutex{},
 
 		ID: createID(32),
 	}
@@ -103,9 +105,7 @@ func (s *Socket) listenReadPump() {
 		}
 
 		message := parseByteToMessage(readDataByte)
-
 		go s.server.onPacket(s, message)
-		// s.Broadcast(readDataByte)
 	}
 }
 
@@ -118,6 +118,7 @@ func (s *Socket) listenWritePump() {
 	for {
 		select {
 		case message, ok := <-s.send:
+
 			s.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The server closed the channel.
@@ -129,21 +130,18 @@ func (s *Socket) listenWritePump() {
 			if err != nil {
 				return
 			}
-			w.Write(message)
 
+			s.evMu.Lock()
+			w.Write(message)
 			// Add queued chat messages to the current websocket message.
 			n := len(s.send)
 			for i := 0; i < n; i++ {
 				w.Write(newline)
 				w.Write(<-s.send)
 			}
+			s.evMu.Unlock()
 
 			if err := w.Close(); err != nil {
-				return
-			}
-		case <-ticker.C:
-			s.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := s.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}
