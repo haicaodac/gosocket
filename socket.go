@@ -117,7 +117,7 @@ func (s *Socket) listenWritePump() {
 	for {
 		select {
 		case message, ok := <-s.send:
-			s.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			// s.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The server closed the channel.
 				s.conn.WriteMessage(websocket.CloseMessage, []byte{})
