@@ -38,7 +38,7 @@ type Socket struct {
 	conn   *websocket.Conn
 	send   chan []byte
 	ID     string
-	r      *http.Request
+	route  *http.Request
 }
 
 type subscription struct {
@@ -70,8 +70,8 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 		conn:   conn,
 		send:   make(chan []byte, 256),
 
-		ID: createID(32),
-		r:  r,
+		ID:    createID(32),
+		route: r,
 	}
 
 	socket.server.register <- socket
