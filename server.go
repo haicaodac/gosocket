@@ -9,6 +9,7 @@ import (
 type Server struct {
 	events map[string]*caller
 	evMu   sync.Mutex
+	add    chan bool
 
 	sockets       map[*Socket]bool
 	broadcast     chan subscription
@@ -29,6 +30,7 @@ func New() *Server {
 	Server := &Server{
 		events: make(map[string]*caller),
 		evMu:   sync.Mutex{},
+		add:    make(chan bool),
 
 		sockets: make(map[*Socket]bool),
 		rooms:   make(map[string]map[*Socket]bool),
@@ -97,7 +99,19 @@ func (s *Server) run() {
 
 		//Send message to specific socket by socket_id
 		case subscription := <-s.broadcastTo:
-			s.doBroadcastTo(subscription)
+			message := parseMessage(subscription.message)
+			for socket := range s.sockets {
+				if socket.ID == subscription.socketID {
+					select {
+					case socket.send <- message:
+					default:
+						s.unregister <- socket
+					}
+					select {
+					case <-s.add:
+					}
+				}
+			}
 
 		// Send message to other user except myself
 		case subscription := <-s.broadcastEmit:
@@ -197,6 +211,7 @@ func (s *Server) BroadcastTo(socketID string, message Message) {
 	subscription.socketID = socketID
 	subscription.message = message
 	s.broadcastTo <- subscription
+	s.add <- true
 }
 
 // BroadcastRoom ...
@@ -233,19 +248,4 @@ func (s *Server) CountSocketInRoom(name string) int {
 	// fmt.Println("2")
 	count := len(s.rooms[name])
 	return count
-}
-
-func (s *Server) doBroadcastTo(subscription subscription) {
-	s.evMu.Lock()
-	defer s.evMu.Unlock()
-	message := parseMessage(subscription.message)
-	for socket := range s.sockets {
-		if socket.ID == subscription.socketID {
-			select {
-			case socket.send <- message:
-			default:
-				s.unregister <- socket
-			}
-		}
-	}
 }
