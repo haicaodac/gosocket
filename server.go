@@ -2,7 +2,6 @@ package gosocket
 
 import (
 	"fmt"
-	"log"
 	"sync"
 )
 
@@ -98,17 +97,7 @@ func (s *Server) run() {
 
 		//Send message to specific socket by socket_id
 		case subscription := <-s.broadcastTo:
-			message := parseMessage(subscription.message)
-			log.Println(message)
-			for socket := range s.sockets {
-				if socket.ID == subscription.socketID {
-					select {
-					case socket.send <- message:
-					default:
-						s.unregister <- socket
-					}
-				}
-			}
+			s.doBroadcastTo(subscription)
 
 		// Send message to other user except myself
 		case subscription := <-s.broadcastEmit:
@@ -244,4 +233,19 @@ func (s *Server) CountSocketInRoom(name string) int {
 	// fmt.Println("2")
 	count := len(s.rooms[name])
 	return count
+}
+
+func (s *Server) doBroadcastTo(subscription subscription) {
+	s.evMu.Lock()
+	defer s.evMu.Unlock()
+	message := parseMessage(subscription.message)
+	for socket := range s.sockets {
+		if socket.ID == subscription.socketID {
+			select {
+			case socket.send <- message:
+			default:
+				s.unregister <- socket
+			}
+		}
+	}
 }

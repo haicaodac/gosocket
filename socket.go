@@ -38,6 +38,7 @@ type Socket struct {
 	conn   *websocket.Conn
 	send   chan []byte
 	ID     string
+	r      *http.Request
 }
 
 type subscription struct {
@@ -70,6 +71,7 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 		send:   make(chan []byte, 256),
 
 		ID: createID(32),
+		r:  r,
 	}
 
 	socket.server.register <- socket
@@ -115,7 +117,6 @@ func (s *Socket) listenWritePump() {
 	for {
 		select {
 		case message, ok := <-s.send:
-
 			s.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The server closed the channel.
@@ -127,7 +128,6 @@ func (s *Socket) listenWritePump() {
 			if err != nil {
 				return
 			}
-			log.Println(message)
 
 			w.Write(message)
 			// Add queued chat messages to the current websocket message.
