@@ -97,14 +97,12 @@ func (s *Server) run() {
 
 		//Send message to specific socket by socket_id
 		case subscription := <-s.broadcastTo:
-			s.evMu.Lock()
 			message := parseMessage(subscription.message)
 			for socket := range s.sockets {
 				if socket.ID == subscription.socketID {
 					socket.send <- message
 				}
 			}
-			s.evMu.Unlock()
 
 		// Send message to other user except myself
 		case subscription := <-s.broadcastEmit:
@@ -200,10 +198,12 @@ func (s *Server) Broadcast(message Message) {
 
 // BroadcastTo ...
 func (s *Server) BroadcastTo(socketID string, message Message) {
+	s.evMu.Lock()
 	subscription := subscription{}
 	subscription.socketID = socketID
 	subscription.message = message
 	s.broadcastTo <- subscription
+	s.evMu.Unlock()
 }
 
 // BroadcastRoom ...
