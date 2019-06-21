@@ -36,9 +36,9 @@ var (
 type Socket struct {
 	server *Server
 	conn   *websocket.Conn
-	send   chan []byte
+	send   chan Message
 	ID     string
-	route  *http.Request
+	Route  http.Request
 }
 
 type subscription struct {
@@ -68,10 +68,10 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 	socket := &Socket{
 		server: server,
 		conn:   conn,
-		send:   make(chan []byte, 256),
+		send:   make(chan Message),
 
 		ID:    createID(32),
-		route: r,
+		Route: *r,
 	}
 
 	socket.server.register <- socket
@@ -94,7 +94,8 @@ func (s *Socket) listenReadPump() {
 	s.conn.SetReadDeadline(time.Now().Add(pongWait))
 	s.conn.SetPongHandler(func(string) error { s.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, readDataByte, err := s.conn.ReadMessage()
+		message := Message{}
+		err := s.conn.ReadJSON(&message)
 		if err != nil {
 			s.Disconnect()
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -102,8 +103,6 @@ func (s *Socket) listenReadPump() {
 			}
 			break
 		}
-
-		message := parseByteToMessage(readDataByte)
 		go s.server.onPacket(s, message)
 	}
 }
@@ -117,27 +116,14 @@ func (s *Socket) listenWritePump() {
 	for {
 		select {
 		case message, ok := <-s.send:
-			s.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The server closed the channel.
 				s.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := s.conn.NextWriter(websocket.TextMessage)
+			err := s.conn.WriteJSON(message)
 			if err != nil {
-				return
-			}
-
-			w.Write(message)
-			// Add queued chat messages to the current websocket message.
-			n := len(s.send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-s.send)
-			}
-
-			if err := w.Close(); err != nil {
 				return
 			}
 		}

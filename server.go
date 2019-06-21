@@ -1,7 +1,6 @@
 package gosocket
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -86,10 +85,9 @@ func (s *Server) run() {
 
 		//Send message to all socket
 		case subscription := <-s.broadcast:
-			message := parseMessage(subscription.message)
 			for socket := range s.sockets {
 				select {
-				case socket.send <- message:
+				case socket.send <- subscription.message:
 				default:
 					s.unregister <- socket
 				}
@@ -97,11 +95,10 @@ func (s *Server) run() {
 
 		//Send message to specific socket by socket_id
 		case subscription := <-s.broadcastTo:
-			message := parseMessage(subscription.message)
 			for socket := range s.sockets {
 				if socket.ID == subscription.socketID {
 					select {
-					case socket.send <- message:
+					case socket.send <- subscription.message:
 					default:
 						s.unregister <- socket
 					}
@@ -110,19 +107,15 @@ func (s *Server) run() {
 
 		// Send message to other user except myself
 		case subscription := <-s.broadcastEmit:
-			message := parseMessage(subscription.message)
 			for socket := range s.sockets {
-				fmt.Println(socket.ID)
-				fmt.Println(subscription.socket.ID)
 				if socket.ID != subscription.socket.ID {
-					socket.send <- message
+					socket.send <- subscription.message
 				}
 			}
 
 		// Send message to myself
 		case subscription := <-s.emit:
-			message := parseMessage(subscription.message)
-			subscription.socket.send <- message
+			subscription.socket.send <- subscription.message
 
 			// End event about socket
 
@@ -132,7 +125,6 @@ func (s *Server) run() {
 
 		// Send message to every socket in specific room by room_id
 		case subscription := <-s.broadcastRoom:
-			message := parseMessage(subscription.message)
 			flag := true // Validator socket in room
 			if subscription.socket != nil {
 				flag = false
@@ -145,7 +137,7 @@ func (s *Server) run() {
 			if flag {
 				for socket := range s.rooms[subscription.room] {
 					select {
-					case socket.send <- message:
+					case socket.send <- subscription.message:
 					default:
 						s.unregister <- socket
 					}
