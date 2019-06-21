@@ -9,7 +9,6 @@ import (
 type Server struct {
 	events map[string]*caller
 	evMu   sync.Mutex
-	add    chan bool
 
 	sockets       map[*Socket]bool
 	broadcast     chan subscription
@@ -30,7 +29,6 @@ func New() *Server {
 	Server := &Server{
 		events: make(map[string]*caller),
 		evMu:   sync.Mutex{},
-		add:    make(chan bool),
 
 		sockets: make(map[*Socket]bool),
 		rooms:   make(map[string]map[*Socket]bool),
@@ -106,9 +104,6 @@ func (s *Server) run() {
 					case socket.send <- message:
 					default:
 						s.unregister <- socket
-					}
-					select {
-					case <-s.add:
 					}
 				}
 			}
@@ -211,7 +206,6 @@ func (s *Server) BroadcastTo(socketID string, message Message) {
 	subscription.socketID = socketID
 	subscription.message = message
 	s.broadcastTo <- subscription
-	s.add <- true
 }
 
 // BroadcastRoom ...
