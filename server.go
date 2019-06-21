@@ -97,9 +97,8 @@ func (s *Server) run() {
 
 		//Send message to specific socket by socket_id
 		case subscription := <-s.broadcastTo:
-			s.evMu.Lock()
+			fmt.Println("send to")
 			message := parseMessage(subscription.message)
-			s.evMu.Unlock()
 			for socket := range s.sockets {
 				if socket.ID == subscription.socketID {
 					select {
@@ -204,6 +203,7 @@ func (s *Server) Broadcast(message Message) {
 
 // BroadcastTo ...
 func (s *Server) BroadcastTo(socketID string, message Message) {
+	fmt.Println("send broad")
 	subscription := subscription{}
 	subscription.socketID = socketID
 	subscription.message = message
