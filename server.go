@@ -100,7 +100,11 @@ func (s *Server) run() {
 			message := parseMessage(subscription.message)
 			for socket := range s.sockets {
 				if socket.ID == subscription.socketID {
-					socket.send <- message
+					select {
+					case socket.send <- message:
+					default:
+						s.unregister <- socket
+					}
 				}
 			}
 
@@ -198,12 +202,10 @@ func (s *Server) Broadcast(message Message) {
 
 // BroadcastTo ...
 func (s *Server) BroadcastTo(socketID string, message Message) {
-	s.evMu.Lock()
 	subscription := subscription{}
 	subscription.socketID = socketID
 	subscription.message = message
 	s.broadcastTo <- subscription
-	s.evMu.Unlock()
 }
 
 // BroadcastRoom ...
