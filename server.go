@@ -2,6 +2,7 @@ package gosocket
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -97,8 +98,8 @@ func (s *Server) run() {
 
 		//Send message to specific socket by socket_id
 		case subscription := <-s.broadcastTo:
-			fmt.Println("send to")
 			message := parseMessage(subscription.message)
+			log.Println(message)
 			for socket := range s.sockets {
 				if socket.ID == subscription.socketID {
 					select {
@@ -203,13 +204,10 @@ func (s *Server) Broadcast(message Message) {
 
 // BroadcastTo ...
 func (s *Server) BroadcastTo(socketID string, message Message) {
-	fmt.Println("send broad")
 	subscription := subscription{}
 	subscription.socketID = socketID
 	subscription.message = message
-	s.evMu.Lock()
 	s.broadcastTo <- subscription
-	s.evMu.Unlock()
 }
 
 // BroadcastRoom ...

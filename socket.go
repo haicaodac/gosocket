@@ -127,6 +127,7 @@ func (s *Socket) listenWritePump() {
 			if err != nil {
 				return
 			}
+			log.Println(message)
 
 			w.Write(message)
 			// Add queued chat messages to the current websocket message.
