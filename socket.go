@@ -3,7 +3,6 @@ package gosocket
 import (
 	"log"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -38,7 +37,6 @@ type Socket struct {
 	server *Server
 	conn   *websocket.Conn
 	send   chan []byte
-	evMu   sync.Mutex
 	ID     string
 }
 
@@ -70,7 +68,6 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 		server: server,
 		conn:   conn,
 		send:   make(chan []byte, 256),
-		evMu:   sync.Mutex{},
 
 		ID: createID(32),
 	}
@@ -131,7 +128,6 @@ func (s *Socket) listenWritePump() {
 				return
 			}
 
-			s.evMu.Lock()
 			w.Write(message)
 			// Add queued chat messages to the current websocket message.
 			n := len(s.send)
@@ -139,7 +135,6 @@ func (s *Socket) listenWritePump() {
 				w.Write(newline)
 				w.Write(<-s.send)
 			}
-			s.evMu.Unlock()
 
 			if err := w.Close(); err != nil {
 				return
