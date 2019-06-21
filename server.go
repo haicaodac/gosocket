@@ -207,7 +207,9 @@ func (s *Server) BroadcastTo(socketID string, message Message) {
 	subscription := subscription{}
 	subscription.socketID = socketID
 	subscription.message = message
+	s.evMu.Lock()
 	s.broadcastTo <- subscription
+	s.evMu.Unlock()
 }
 
 // BroadcastRoom ...
