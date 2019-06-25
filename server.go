@@ -97,11 +97,7 @@ func (s *Server) run() {
 		case subscription := <-s.broadcastTo:
 			for socket := range s.sockets {
 				if socket.ID == subscription.socketID {
-					select {
-					case socket.send <- subscription.message:
-					default:
-						s.unregister <- socket
-					}
+					socket.send <- subscription.message
 				}
 			}
 
