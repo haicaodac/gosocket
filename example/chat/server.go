@@ -40,6 +40,6 @@ func main() {
 		http.ServeFile(w, r, "index.html")
 	})
 
-	fmt.Println("Server run port: 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	fmt.Println("Server run port: 8070")
+	log.Fatal(http.ListenAndServe(":8070", nil))
 }

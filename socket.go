@@ -118,12 +118,14 @@ func (s *Socket) listenWritePump() {
 		case message, ok := <-s.send:
 			if !ok {
 				// The server closed the channel.
+				s.Disconnect()
 				s.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
 			err := s.conn.WriteJSON(message)
 			if err != nil {
+				s.Disconnect()
 				return
 			}
 		}

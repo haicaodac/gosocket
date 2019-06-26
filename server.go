@@ -86,32 +86,36 @@ func (s *Server) run() {
 		//Send message to all socket
 		case subscription := <-s.broadcast:
 			for socket := range s.sockets {
-				select {
-				case socket.send <- subscription.message:
-				default:
-					s.unregister <- socket
+				if socket != nil {
+					socket.send <- subscription.message
 				}
 			}
 
 		//Send message to specific socket by socket_id
 		case subscription := <-s.broadcastTo:
 			for socket := range s.sockets {
-				if socket.ID == subscription.socketID {
-					socket.send <- subscription.message
+				if socket != nil {
+					if socket.ID == subscription.socketID {
+						socket.send <- subscription.message
+					}
 				}
 			}
 
 		// Send message to other user except myself
 		case subscription := <-s.broadcastEmit:
 			for socket := range s.sockets {
-				if socket.ID != subscription.socket.ID {
-					socket.send <- subscription.message
+				if socket != nil {
+					if socket.ID != subscription.socket.ID {
+						socket.send <- subscription.message
+					}
 				}
 			}
 
 		// Send message to myself
 		case subscription := <-s.emit:
-			subscription.socket.send <- subscription.message
+			if subscription.socket != nil {
+				subscription.socket.send <- subscription.message
+			}
 
 			// End event about socket
 
@@ -132,10 +136,8 @@ func (s *Server) run() {
 			}
 			if flag {
 				for socket := range s.rooms[subscription.room] {
-					select {
-					case socket.send <- subscription.message:
-					default:
-						s.unregister <- socket
+					if socket != nil {
+						socket.send <- subscription.message
 					}
 				}
 			}
