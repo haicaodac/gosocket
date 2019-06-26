@@ -63,13 +63,19 @@ func (s *Server) run() {
 		 */
 		case socket := <-s.register:
 			s.sockets[socket] = true
+			message := Message{
+				Type:    "connection",
+				Content: make(map[string]interface{}),
+			}
+			s.onPacket(socket, message)
+
 		case socket := <-s.unregister:
 			if _, ok := s.sockets[socket]; ok {
 				message := Message{
 					Type:    "disconnect",
 					Content: make(map[string]interface{}),
 				}
-				go s.onPacket(socket, message)
+				s.onPacket(socket, message)
 				delete(s.sockets, socket)
 				close(socket.send)
 

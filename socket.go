@@ -24,7 +24,7 @@ const (
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
+	maxMessageSize = 1024
 )
 
 var (
@@ -76,11 +76,6 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 
 	socket.server.register <- socket
 
-	message := Message{
-		Type:    "connection",
-		Content: make(map[string]interface{}),
-	}
-	go socket.server.onPacket(socket, message)
 	go socket.listenReadPump()
 	go socket.listenWritePump()
 }
@@ -97,7 +92,7 @@ func (s *Socket) listenReadPump() {
 		message := Message{}
 		err := s.conn.ReadJSON(&message)
 		if err != nil {
-			s.Disconnect()
+			s.server.unregister <- s
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
@@ -116,16 +111,17 @@ func (s *Socket) listenWritePump() {
 	for {
 		select {
 		case message, ok := <-s.send:
+			s.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The server closed the channel.
-				s.Disconnect()
+				s.server.unregister <- s
 				s.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
 			err := s.conn.WriteJSON(message)
 			if err != nil {
-				s.Disconnect()
+				s.server.unregister <- s
 				return
 			}
 		}
