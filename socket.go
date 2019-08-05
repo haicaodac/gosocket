@@ -63,9 +63,10 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
 	if err != nil {
+		m := "Unable to upgrade to websockets"
 		log.Println("conn err", err)
 		http.Error(w, m, http.StatusBadRequest)
-        return
+		return
 	}
 	socket := &Socket{
 		server: server,
