@@ -64,7 +64,8 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
 	if err != nil {
 		log.Println("conn err", err)
-		return
+		http.Error(w, m, http.StatusBadRequest)
+        return
 	}
 	socket := &Socket{
 		server: server,
