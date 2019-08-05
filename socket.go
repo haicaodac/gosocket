@@ -68,7 +68,7 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, m, http.StatusBadRequest)
 		return
 	}
-	defer conn.Close()
+	// defer conn.Close()
 	socket := &Socket{
 		server: server,
 		conn:   conn,
@@ -96,6 +96,7 @@ func (s *Socket) listenReadPump() {
 		message := Message{}
 		err := s.conn.ReadJSON(&message)
 		if err != nil {
+			s.server.unregister <- s
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
