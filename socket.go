@@ -96,7 +96,6 @@ func (s *Socket) listenReadPump() {
 		message := Message{}
 		err := s.conn.ReadJSON(&message)
 		if err != nil {
-			s.server.unregister <- s
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
