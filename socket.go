@@ -68,6 +68,7 @@ func Router(server *Server, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, m, http.StatusBadRequest)
 		return
 	}
+	defer conn.Close()
 	socket := &Socket{
 		server: server,
 		conn:   conn,
